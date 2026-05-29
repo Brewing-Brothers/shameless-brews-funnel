@@ -62,6 +62,7 @@ const FAQS = [
 const PRICING = [
   {
     tier: "Single",
+    stripeKey: "single",
     price: 13,
     perBottle: 13,
     description: "Best intro — try before committing",
@@ -69,6 +70,7 @@ const PRICING = [
   },
   {
     tier: "Double Mix-and-Match",
+    stripeKey: "double",
     price: 21,
     perBottle: 10.5,
     description: "Better value per bottle",
@@ -76,6 +78,7 @@ const PRICING = [
   },
   {
     tier: "6-Pack",
+    stripeKey: "sixpack",
     price: 45,
     perBottle: 7.5,
     description: "Stock up, free delivery",
@@ -114,9 +117,11 @@ export default function Home() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [countdown, setCountdown] = useState({ hours: 8, minutes: 0, seconds: 0 });
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
   const batchSize = parseInt(process.env.NEXT_PUBLIC_BATCH_SIZE || "47", 10);
   const urgencyHours = parseInt(process.env.NEXT_PUBLIC_URGENCY_HOURS || "8", 10);
+  const stripeEnabled = process.env.NEXT_PUBLIC_STRIPE_ENABLED === "true";
 
   useEffect(() => {
     const stored = sessionStorage.getItem("sb_countdown_end");
@@ -172,6 +177,36 @@ export default function Home() {
       setMsg(String(err));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCheckout(stripeKey: string) {
+    if (!stripeEnabled) {
+      setSelectedTier(PRICING.find(p => p.stripeKey === stripeKey)?.tier || stripeKey);
+      document.getElementById("pickup-form")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    setCheckoutLoading(stripeKey);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier: stripeKey }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else if (data.blocked) {
+        setSelectedTier(PRICING.find(p => p.stripeKey === stripeKey)?.tier || stripeKey);
+        document.getElementById("pickup-form")?.scrollIntoView({ behavior: "smooth" });
+      } else {
+        alert(data.error || "Checkout failed. Please try again.");
+      }
+    } catch (err) {
+      alert("Checkout error. Please try again.");
+    } finally {
+      setCheckoutLoading(null);
     }
   }
 
@@ -370,13 +405,15 @@ export default function Home() {
                 <p className="text-sm text-slate-500 mb-4">${tier.perBottle.toFixed(2)}/bottle</p>
                 <p className="text-slate-600 mb-6">{tier.description}</p>
                 <button
-                  onClick={() => {
-                    setSelectedTier(tier.tier);
-                    document.getElementById("pickup-form")?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                  className={`w-full py-3 rounded-xl font-semibold ${t.button}`}
+                  onClick={() => handleCheckout(tier.stripeKey)}
+                  disabled={checkoutLoading === tier.stripeKey}
+                  className={`w-full py-3 rounded-xl font-semibold ${t.button} disabled:opacity-50`}
                 >
-                  Reserve — Pay on Pickup
+                  {checkoutLoading === tier.stripeKey
+                    ? "Loading..."
+                    : stripeEnabled
+                    ? `Order Now — $${tier.price}`
+                    : "Reserve — Pay on Pickup"}
                 </button>
               </div>
             ))}
