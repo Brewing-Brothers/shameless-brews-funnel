@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid tier" }, { status: 400 });
     }
 
-    const baseUrl = "https://shameless-brews-funnel-5nkybq6b2.vercel.app";
+    const baseUrl = "https://shameless-brews-funnel-ae5bl71ef.vercel.app";
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
