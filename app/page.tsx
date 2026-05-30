@@ -81,7 +81,7 @@ const PRICING = [
     stripeKey: "sixpack",
     price: 45,
     perBottle: 7.5,
-    description: "Stock up, free delivery",
+    description: "Stock up + free shipping on orders over $45",
     badge: "BEST VALUE",
   },
 ];
@@ -279,7 +279,7 @@ export default function Home() {
               Homegrown, hand-pressed, organic juice in reusable glass jars.
             </p>
             <p className="text-sm text-slate-600 mb-8">
-              Pickup: Carmichael, CA • Delivery: 5 miles • Ships: USA
+              Pickup: Carmichael, CA • Delivery: 5 miles • Ships: USA nationwide
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -333,12 +333,12 @@ export default function Home() {
               <div key={flavor.name} className={`rounded-2xl p-6 text-center flex flex-col ${t.card}`}>
                 <div className={`w-16 h-16 ${flavor.color} rounded-full mx-auto mb-4 shadow-lg`} />
                 <h3 className="font-bold mb-1">{flavor.name}</h3>
-                <p className="text-sm text-slate-600 mb-4">{flavor.description}</p>
+                <p className="text-sm text-slate-600 mb-4 flex-grow">{flavor.description}</p>
                 <a
                   href="#order"
-                  className={`mt-auto inline-block px-4 py-2 rounded-lg text-sm font-semibold ${t.button}`}
+                  className="w-full py-2 rounded-xl font-semibold border-2 border-green-600 text-green-700 bg-white hover:bg-orange-400 hover:text-white transition-colors duration-200 mt-auto inline-block"
                 >
-                  Order Now
+                  Add to Cart
                 </a>
               </div>
             ))}
@@ -397,7 +397,7 @@ export default function Home() {
             {PRICING.map((tier) => (
               <div
                 key={tier.tier}
-                className={`relative rounded-2xl p-6 border-2 flex flex-col ${
+                className={`relative rounded-2xl p-6 border-2 flex flex-col min-h-[320px] ${
                   tier.badge ? "border-green-600 shadow-lg" : "border-green-200"
                 }`}
               >
@@ -409,18 +409,20 @@ export default function Home() {
                 <h3 className="text-xl font-bold mt-2 mb-2">{tier.tier}</h3>
                 <p className="text-3xl font-bold text-green-700">${tier.price}</p>
                 <p className="text-sm text-slate-500 mb-4">${tier.perBottle.toFixed(2)}/bottle</p>
-                <p className="text-slate-600 mb-6 flex-grow">{tier.description}</p>
-                <button
-                  onClick={() => handleCheckout(tier.stripeKey)}
-                  disabled={checkoutLoading === tier.stripeKey}
-                  className={`w-full py-3 rounded-xl font-semibold ${t.button} disabled:opacity-50 mt-auto`}
-                >
-                  {checkoutLoading === tier.stripeKey
-                    ? "Loading..."
-                    : stripeEnabled
-                    ? `Order Now — $${tier.price}`
-                    : "Reserve — Pay on Pickup"}
-                </button>
+                <p className="text-slate-600 mb-6">{tier.description}</p>
+                <div className="mt-auto">
+                  <button
+                    onClick={() => handleCheckout(tier.stripeKey)}
+                    disabled={checkoutLoading === tier.stripeKey}
+                    className={`w-full py-3 rounded-xl font-semibold ${t.button} disabled:opacity-50`}
+                  >
+                    {checkoutLoading === tier.stripeKey
+                      ? "Loading..."
+                      : stripeEnabled
+                      ? `Order Now — $${tier.price}`
+                      : "Reserve — Pay on Pickup"}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -570,7 +572,7 @@ export default function Home() {
       <footer className="py-8 px-4 sm:px-6 bg-green-900 border-t border-green-800">
         <div className="max-w-5xl mx-auto text-center text-green-100">
           <p className="font-bold text-white mb-2">Shameless Brews</p>
-          <p className="text-sm">Carmichael, CA</p>
+          <p className="text-sm">Carmichael, CA • Ships nationwide</p>
           <p className="text-sm mt-4">© 2026 Shameless Brews. All rights reserved.</p>
         </div>
       </footer>
@@ -580,7 +582,7 @@ export default function Home() {
         <div className="flex items-center justify-between">
           <div>
             <p className="font-bold text-sm">Shameless Brews</p>
-            <p className="text-xs opacity-90">Only {batchSize} jars left</p>
+            <p className="text-xs opacity-90">Ships Nationwide</p>
           </div>
           <a
             href="#order"
