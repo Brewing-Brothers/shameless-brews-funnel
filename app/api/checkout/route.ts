@@ -11,11 +11,18 @@ function getStripe() {
   });
 }
 
-const PRICE_MAP: Record<string, string | undefined> = {
-  single: process.env.STRIPE_PRICE_SINGLE,
-  double: process.env.STRIPE_PRICE_DOUBLE,
-  sixpack: process.env.STRIPE_PRICE_SIXPACK,
-};
+function getPriceId(tier: string): string | undefined {
+  switch (tier) {
+    case "single":
+      return process.env.STRIPE_PRICE_SINGLE;
+    case "double":
+      return process.env.STRIPE_PRICE_DOUBLE;
+    case "sixpack":
+      return process.env.STRIPE_PRICE_SIXPACK;
+    default:
+      return undefined;
+  }
+}
 
 const PRODUCT_NAMES: Record<string, string> = {
   single: "Single Bottle — $13",
@@ -40,7 +47,7 @@ export async function POST(req: Request) {
 
     if (!process.env.STRIPE_SECRET_KEY) {
       return NextResponse.json(
-        { ok: false, error: "Stripe not configured" },
+        { ok: false, error: "STRIPE_SECRET_KEY not configured" },
         { status: 500 }
       );
     }
@@ -49,27 +56,27 @@ export async function POST(req: Request) {
     const tier = String(body.tier || "").toLowerCase();
     const email = body.email ? String(body.email).trim() : undefined;
 
-    if (!PRICE_MAP[tier]) {
+    const validTiers = ["single", "double", "sixpack"];
+    if (!validTiers.includes(tier)) {
       return NextResponse.json(
         { ok: false, error: `Invalid tier: ${tier}. Use: single, double, or sixpack` },
         { status: 400 }
       );
     }
 
-    const priceId = PRICE_MAP[tier];
-    if (!priceId || priceId.startsWith("price_PLACEHOLDER")) {
+    const priceId = getPriceId(tier);
+    if (!priceId) {
       return NextResponse.json(
         {
           ok: false,
-          error: "Price ID not configured for this tier. Contact support.",
-          blocked: true
+          error: `Price ID not configured for tier: ${tier}. Check STRIPE_PRICE_* env vars.`,
         },
-        { status: 503 }
+        { status: 500 }
       );
     }
 
     const stripe = getStripe();
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://shameless-brews-funnel-5nkybq6b2.vercel.app";
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
@@ -84,7 +91,7 @@ export async function POST(req: Request) {
       cancel_url: `${baseUrl}/#order`,
       metadata: {
         tier,
-        product: PRODUCT_NAMES[tier],
+        product: PRODUCT_NAMES[tier] || tier,
       },
     };
 
