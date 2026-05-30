@@ -417,16 +417,12 @@ export default function Home() {
                   <button
                     onClick={() => handleCheckout(tier.stripeKey)}
                     disabled={checkoutLoading === tier.stripeKey}
-                    className="w-full py-3 rounded-xl font-semibold disabled:opacity-50 transition-colors duration-200"
-                    style={{ backgroundColor: "#166534", color: "white" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#14532d")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#166534")}
+                    className="w-full py-3 rounded-xl font-semibold mt-auto disabled:opacity-50 text-white transition-colors duration-200"
+                    style={{ backgroundColor: '#166534' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#14532d')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#166534')}
                   >
-                    {checkoutLoading === tier.stripeKey
-                      ? "Loading..."
-                      : stripeEnabled
-                      ? `Order Now — $${tier.price}`
-                      : "Reserve — Pay on Pickup"}
+                    {checkoutLoading === tier.stripeKey ? "Loading..." : `Order Now — $${tier.price}`}
                   </button>
                 </div>
               </div>

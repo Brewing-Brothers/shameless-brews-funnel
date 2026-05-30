@@ -32,19 +32,6 @@ const PRODUCT_NAMES: Record<string, string> = {
 
 export async function POST(req: Request) {
   try {
-    const stripeEnabled = process.env.NEXT_PUBLIC_STRIPE_ENABLED === "true";
-
-    if (!stripeEnabled) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Payments not yet enabled. Use pickup reservation for now.",
-          blocked: true
-        },
-        { status: 503 }
-      );
-    }
-
     if (!process.env.STRIPE_SECRET_KEY) {
       return NextResponse.json(
         { ok: false, error: "STRIPE_SECRET_KEY not configured" },
