@@ -121,7 +121,6 @@ export default function Home() {
 
   const batchSize = parseInt(process.env.NEXT_PUBLIC_BATCH_SIZE || "47", 10);
   const urgencyHours = parseInt(process.env.NEXT_PUBLIC_URGENCY_HOURS || "8", 10);
-  const stripeEnabled = process.env.NEXT_PUBLIC_STRIPE_ENABLED === "true";
 
   useEffect(() => {
     const stored = sessionStorage.getItem("sb_countdown_end");
@@ -181,12 +180,6 @@ export default function Home() {
   }
 
   async function handleCheckout(stripeKey: string) {
-    if (!stripeEnabled) {
-      setSelectedTier(PRICING.find(p => p.stripeKey === stripeKey)?.tier || stripeKey);
-      document.getElementById("pickup-form")?.scrollIntoView({ behavior: "smooth" });
-      return;
-    }
-
     setCheckoutLoading(stripeKey);
     try {
       const res = await fetch("/api/checkout", {
@@ -197,13 +190,10 @@ export default function Home() {
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
-      } else if (data.blocked) {
-        setSelectedTier(PRICING.find(p => p.stripeKey === stripeKey)?.tier || stripeKey);
-        document.getElementById("pickup-form")?.scrollIntoView({ behavior: "smooth" });
       } else {
         alert(data.error || "Checkout failed. Please try again.");
       }
-    } catch (err) {
+    } catch {
       alert("Checkout error. Please try again.");
     } finally {
       setCheckoutLoading(null);
@@ -283,12 +273,15 @@ export default function Home() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <a
-                href="#order"
-                className={`inline-flex justify-center items-center px-8 py-4 rounded-2xl font-semibold text-lg ${t.button}`}
+              <button
+                onClick={() => handleCheckout("double")}
+                className="inline-flex justify-center items-center px-8 py-4 rounded-2xl font-semibold text-lg text-white transition-colors duration-200"
+                style={{ backgroundColor: '#166534' }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#14532d')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#166534')}
               >
-                Order Now — Local Pickup
-              </a>
+                Order Now — Ships Nationwide
+              </button>
               <button
                 onClick={() => setShowLeadModal(true)}
                 className={`inline-flex justify-center items-center px-8 py-4 rounded-2xl font-semibold text-lg ${t.buttonOutline}`}
@@ -436,9 +429,15 @@ export default function Home() {
         <div className="max-w-3xl mx-auto text-center">
           <h2 className={`text-2xl sm:text-3xl font-bold mb-6 ${t.accent}`}>Ready to Try Real Juice?</h2>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <a href="#order" className={`inline-flex justify-center items-center px-8 py-4 rounded-2xl font-semibold ${t.button}`}>
-              Order Now — Local Pickup
-            </a>
+            <button
+              onClick={() => handleCheckout("double")}
+              className="inline-flex justify-center items-center px-8 py-4 rounded-2xl font-semibold text-white transition-colors duration-200"
+              style={{ backgroundColor: '#166534' }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#14532d')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#166534')}
+            >
+              Order Now — Ships Nationwide
+            </button>
             <button
               onClick={() => setShowLeadModal(true)}
               className={`inline-flex justify-center items-center px-8 py-4 rounded-2xl font-semibold ${t.buttonOutline}`}
@@ -449,11 +448,35 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PICKUP FORM */}
+      {/* CF-P6: FAQ ACCORDION */}
+      <section className={`py-16 px-4 sm:px-6 ${t.pageBg}`}>
+        <div className="max-w-3xl mx-auto">
+          <h2 className={`text-3xl sm:text-4xl font-bold text-center mb-12 ${t.accent}`}>Frequently Asked Questions</h2>
+          <div className="space-y-4">
+            {FAQS.map((faq, i) => (
+              <div key={i} className="bg-white rounded-xl border border-green-100 overflow-hidden">
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full px-6 py-4 text-left flex items-center justify-between"
+                >
+                  <span className="font-medium">{faq.q}</span>
+                  <span className={`transform transition-transform ${openFaq === i ? "rotate-180" : ""}`}>▼</span>
+                </button>
+                {openFaq === i && (
+                  <div className="px-6 pb-4 text-slate-600">{faq.a}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* LOCAL PICKUP FORM */}
       <section id="pickup-form" className="py-16 px-4 sm:px-6 bg-white scroll-mt-16">
         <div className="max-w-xl mx-auto">
+          <p className="text-center text-slate-600 mb-6">Prefer local pickup in Carmichael, CA? Reserve below — pay on pickup.</p>
           <div className={`rounded-2xl p-8 ${t.card}`}>
-            <h2 className={`text-2xl font-bold mb-2 ${t.accent}`}>Reserve Your Pickup</h2>
+            <h2 className={`text-2xl font-bold mb-2 ${t.accent}`}>Reserve Local Pickup</h2>
             <p className="text-slate-600 mb-6">We&apos;ll reach out to confirm your pickup time. Pay on arrival.</p>
             {selectedTier && (
               <div className="mb-6 p-4 bg-green-50 rounded-xl border border-green-200">
@@ -516,7 +539,8 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full py-4 rounded-xl font-semibold text-lg ${t.button} disabled:opacity-50`}
+                className="w-full py-4 rounded-xl font-semibold text-lg text-white disabled:opacity-50"
+                style={{ backgroundColor: '#166534' }}
               >
                 {loading ? "Reserving..." : "Reserve My Pickup"}
               </button>
@@ -525,41 +549,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CF-P6: FAQ ACCORDION */}
-      <section className={`py-16 px-4 sm:px-6 ${t.pageBg}`}>
-        <div className="max-w-3xl mx-auto">
-          <h2 className={`text-3xl sm:text-4xl font-bold text-center mb-12 ${t.accent}`}>Frequently Asked Questions</h2>
-          <div className="space-y-4">
-            {FAQS.map((faq, i) => (
-              <div key={i} className="bg-white rounded-xl border border-green-100 overflow-hidden">
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between"
-                >
-                  <span className="font-medium">{faq.q}</span>
-                  <span className={`transform transition-transform ${openFaq === i ? "rotate-180" : ""}`}>▼</span>
-                </button>
-                {openFaq === i && (
-                  <div className="px-6 pb-4 text-slate-600">{faq.a}</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CF-P10: FINAL CTA DARK SECTION */}
       <section className="py-16 px-4 sm:px-6 bg-green-900">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Ready for Fresh Organic Juice?</h2>
-          <p className="text-green-100 text-lg mb-8">Small-batch. Local. Real ingredients. No excuses.</p>
+          <p className="text-green-100 text-lg mb-8">Small-batch. Local. Real ingredients. Ships nationwide.</p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <a
-              href="#order"
-              className="inline-flex justify-center items-center px-8 py-4 rounded-2xl font-semibold text-lg bg-white text-green-900 hover:bg-green-50"
+            <button
+              onClick={() => handleCheckout("double")}
+              className="inline-flex justify-center items-center px-8 py-4 rounded-2xl font-semibold text-lg bg-white text-green-900 hover:bg-green-50 transition-colors duration-200"
             >
-              Order Now — Local Pickup
-            </a>
+              Order Now — Ships Nationwide
+            </button>
             <button
               onClick={() => setShowLeadModal(true)}
               className="inline-flex justify-center items-center px-8 py-4 rounded-2xl font-semibold text-lg border-2 border-white text-white hover:bg-white/10"
@@ -586,12 +587,12 @@ export default function Home() {
             <p className="font-bold text-sm">Shameless Brews</p>
             <p className="text-xs opacity-90">Ships Nationwide</p>
           </div>
-          <a
-            href="#order"
+          <button
+            onClick={() => handleCheckout("double")}
             className="px-6 py-2 bg-white text-green-700 rounded-xl font-semibold text-sm"
           >
             Order Now
-          </a>
+          </button>
         </div>
       </div>
 
