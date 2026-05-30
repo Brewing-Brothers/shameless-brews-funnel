@@ -3,12 +3,8 @@ import Stripe from "stripe";
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) {
-    throw new Error("STRIPE_SECRET_KEY not configured");
-  }
-  return new Stripe(key, {
-    apiVersion: "2026-05-27.dahlia",
-  });
+  if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
+  return new Stripe(key, { apiVersion: "2026-05-27.dahlia" });
 }
 
 export async function POST(req: Request) {
@@ -68,60 +64,35 @@ export async function POST(req: Request) {
 }
 
 async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
-  const customerEmail = session.customer_email || session.customer_details?.email;
-  const customerName = session.customer_details?.name || "Customer";
-  const tier = session.metadata?.tier || "unknown";
-  const product = session.metadata?.product || "Shameless Brews Order";
-  const amountTotal = session.amount_total ? (session.amount_total / 100).toFixed(2) : "0.00";
-
-  console.log("Payment successful:", {
-    sessionId: session.id,
-    email: customerEmail,
-    name: customerName,
-    tier,
-    product,
-    amount: amountTotal,
-  });
-
   const appsScriptUrl = process.env.APPS_SCRIPT_WEB_APP_URL;
-  if (appsScriptUrl) {
-    try {
-      await fetch(appsScriptUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sheet: "Orders",
-          source: "stripe-webhook",
-          sessionId: session.id,
-          email: customerEmail,
-          name: customerName,
-          tier,
-          product,
-          amount: amountTotal,
-          paymentStatus: session.payment_status,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-    } catch (err) {
-      console.error("Failed to log order to Google Sheet:", err);
-    }
+  if (!appsScriptUrl) {
+    console.error("APPS_SCRIPT_WEB_APP_URL not configured — order not logged");
+    return;
   }
 
-  if (customerEmail && appsScriptUrl) {
-    try {
-      await fetch(appsScriptUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "sendOrderConfirmation",
-          email: customerEmail,
-          name: customerName,
-          product,
-          amount: amountTotal,
-        }),
-      });
-    } catch (err) {
-      console.error("Failed to send order confirmation:", err);
+  const payload = {
+    type: "order",
+    email: session.customer_details?.email || "",
+    name: session.customer_details?.name || "",
+    phone: session.customer_details?.phone || "",
+    address: JSON.stringify(session.collected_information?.shipping_details?.address || {}),
+    amount: (session.amount_total || 0) / 100,
+    tier: session.metadata?.tier || "unknown",
+    product: session.metadata?.product || "",
+  };
+
+  try {
+    const res = await fetch(appsScriptUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.error("Apps Script returned non-OK status:", res.status, await res.text());
+    } else {
+      console.log("Order logged to Google Sheets:", payload.email, payload.product, `$${payload.amount}`);
     }
+  } catch (err) {
+    console.error("Failed to POST order to Apps Script:", err);
   }
 }
