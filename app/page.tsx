@@ -330,10 +330,16 @@ export default function Home() {
           <p className="text-center text-slate-600 mb-12">Homegrown and locally sourced citrus. Small-batch, pressed to order.</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {FLAVORS.map((flavor) => (
-              <div key={flavor.name} className={`rounded-2xl p-6 text-center ${t.card}`}>
+              <div key={flavor.name} className={`rounded-2xl p-6 text-center flex flex-col ${t.card}`}>
                 <div className={`w-16 h-16 ${flavor.color} rounded-full mx-auto mb-4 shadow-lg`} />
                 <h3 className="font-bold mb-1">{flavor.name}</h3>
-                <p className="text-sm text-slate-600">{flavor.description}</p>
+                <p className="text-sm text-slate-600 mb-4">{flavor.description}</p>
+                <a
+                  href="#order"
+                  className={`mt-auto inline-block px-4 py-2 rounded-lg text-sm font-semibold ${t.button}`}
+                >
+                  Order Now
+                </a>
               </div>
             ))}
           </div>
@@ -391,23 +397,23 @@ export default function Home() {
             {PRICING.map((tier) => (
               <div
                 key={tier.tier}
-                className={`relative rounded-2xl p-6 border-2 ${
-                  tier.badge === "MOST POPULAR" ? "border-green-600 shadow-lg" : "border-green-200"
+                className={`relative rounded-2xl p-6 border-2 flex flex-col ${
+                  tier.badge ? "border-green-600 shadow-lg" : "border-green-200"
                 }`}
               >
                 {tier.badge && (
-                  <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-sm font-bold ${t.badgePopular}`}>
+                  <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-sm font-bold whitespace-nowrap ${t.badgePopular}`}>
                     ★ {tier.badge}
                   </span>
                 )}
                 <h3 className="text-xl font-bold mt-2 mb-2">{tier.tier}</h3>
                 <p className="text-3xl font-bold text-green-700">${tier.price}</p>
                 <p className="text-sm text-slate-500 mb-4">${tier.perBottle.toFixed(2)}/bottle</p>
-                <p className="text-slate-600 mb-6">{tier.description}</p>
+                <p className="text-slate-600 mb-6 flex-grow">{tier.description}</p>
                 <button
                   onClick={() => handleCheckout(tier.stripeKey)}
                   disabled={checkoutLoading === tier.stripeKey}
-                  className={`w-full py-3 rounded-xl font-semibold ${t.button} disabled:opacity-50`}
+                  className={`w-full py-3 rounded-xl font-semibold ${t.button} disabled:opacity-50 mt-auto`}
                 >
                   {checkoutLoading === tier.stripeKey
                     ? "Loading..."
