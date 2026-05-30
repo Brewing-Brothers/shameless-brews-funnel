@@ -20,7 +20,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid tier" }, { status: 400 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://shameless-brews-funnel-5nkybq6b2.vercel.app";
+    const proto = req.headers.get("x-forwarded-proto") || "https";
+    const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+    const baseUrl = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_BASE_URL || "https://shameless-brews-funnel-5nkybq6b2.vercel.app");
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
