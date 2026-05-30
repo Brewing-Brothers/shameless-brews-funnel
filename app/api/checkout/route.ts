@@ -89,6 +89,12 @@ export async function POST(req: Request) {
       ],
       success_url: `${baseUrl}/thank-you?session_id={CHECKOUT_SESSION_ID}&type=order`,
       cancel_url: `${baseUrl}/#order`,
+      shipping_address_collection: {
+        allowed_countries: ["US"],
+      },
+      phone_number_collection: {
+        enabled: true,
+      },
       metadata: {
         tier,
         product: PRODUCT_NAMES[tier] || tier,

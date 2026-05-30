@@ -330,16 +330,16 @@ export default function Home() {
           <p className="text-center text-slate-600 mb-12">Homegrown and locally sourced citrus. Small-batch, pressed to order.</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {FLAVORS.map((flavor) => (
-              <div key={flavor.name} className={`rounded-2xl p-6 text-center flex flex-col ${t.card}`}>
+              <div key={flavor.name} className="rounded-2xl p-6 text-center flex flex-col bg-white border border-green-200">
                 <div className={`w-16 h-16 ${flavor.color} rounded-full mx-auto mb-4 shadow-lg`} />
                 <h3 className="font-bold mb-1">{flavor.name}</h3>
                 <p className="text-sm text-slate-600 mb-4 flex-grow">{flavor.description}</p>
-                <a
-                  href="#order"
-                  className="w-full py-2 rounded-xl font-semibold border-2 border-green-600 text-green-700 bg-white hover:bg-orange-400 hover:text-white transition-colors duration-200 mt-auto inline-block"
+                <button
+                  onClick={() => document.getElementById("order")?.scrollIntoView({ behavior: "smooth" })}
+                  className="w-full py-2 rounded-xl font-semibold border-2 border-green-600 text-green-700 bg-white hover:bg-orange-500 hover:text-white transition-colors duration-200 mt-auto"
                 >
                   Add to Cart
-                </a>
+                </button>
               </div>
             ))}
           </div>
@@ -402,7 +402,10 @@ export default function Home() {
                 }`}
               >
                 {tier.badge && (
-                  <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-sm font-bold whitespace-nowrap ${t.badgePopular}`}>
+                  <span
+                    className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-sm font-bold whitespace-nowrap"
+                    style={{ backgroundColor: "#16a34a", color: "white" }}
+                  >
                     ★ {tier.badge}
                   </span>
                 )}
@@ -414,7 +417,10 @@ export default function Home() {
                   <button
                     onClick={() => handleCheckout(tier.stripeKey)}
                     disabled={checkoutLoading === tier.stripeKey}
-                    className={`w-full py-3 rounded-xl font-semibold ${t.button} disabled:opacity-50`}
+                    className="w-full py-3 rounded-xl font-semibold disabled:opacity-50 transition-colors duration-200"
+                    style={{ backgroundColor: "#166534", color: "white" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#14532d")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#166534")}
                   >
                     {checkoutLoading === tier.stripeKey
                       ? "Loading..."
