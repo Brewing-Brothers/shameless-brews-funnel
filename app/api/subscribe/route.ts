@@ -34,11 +34,11 @@ export async function POST(req: Request) {
     }
 
     // Klaviyo — dual write, non-blocking (Sheets is source of truth)
+    // Note: first_name not valid in bulk-create-jobs endpoint; list via relationships not attributes
     const klaviyoKey = process.env.KLAVIYO_API_KEY;
     const klaviyoListId = process.env.KLAVIYO_LIST_ID;
     if (klaviyoKey && klaviyoListId) {
       try {
-        const firstName = name.split(" ")[0] || name;
         const res = await fetch(
           "https://a.klaviyo.com/api/profile-subscription-bulk-create-jobs/",
           {
@@ -58,17 +58,16 @@ export async function POST(req: Request) {
                         type: "profile",
                         attributes: {
                           email,
-                          first_name: firstName,
                           subscriptions: {
-                            email: {
-                              marketing: { consent: "SUBSCRIBED" },
-                            },
+                            email: { marketing: { consent: "SUBSCRIBED" } },
                           },
                         },
                       },
                     ],
                   },
-                  list_id: klaviyoListId,
+                },
+                relationships: {
+                  list: { data: { type: "list", id: klaviyoListId } },
                 },
               },
             }),
