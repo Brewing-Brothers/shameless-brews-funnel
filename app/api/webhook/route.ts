@@ -7,6 +7,47 @@ function getStripe() {
   return new Stripe(key, { apiVersion: "2026-05-27.dahlia" });
 }
 
+// ─── Klaviyo: fire a named event (non-blocking, Sheets is source of truth) ───
+async function fireKlaviyoEvent(
+  eventName: string,
+  email: string,
+  properties: Record<string, unknown>
+) {
+  const klaviyoKey = process.env.KLAVIYO_API_KEY;
+  if (!klaviyoKey) {
+    console.warn("KLAVIYO_API_KEY not set — skipping Klaviyo event:", eventName);
+    return;
+  }
+  try {
+    const res = await fetch("https://a.klaviyo.com/api/events/", {
+      method: "POST",
+      headers: {
+        Authorization: `Klaviyo-API-Key ${klaviyoKey}`,
+        revision: "2024-02-15",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        data: {
+          type: "event",
+          attributes: {
+            metric: { data: { type: "metric", attributes: { name: eventName } } },
+            profile: { data: { type: "profile", attributes: { email } } },
+            properties,
+            time: new Date().toISOString(),
+          },
+        },
+      }),
+    });
+    if (!res.ok) {
+      console.error(`Klaviyo event "${eventName}" failed:`, res.status, await res.text());
+    } else {
+      console.log(`Klaviyo event "${eventName}" fired for:`, email);
+    }
+  } catch (err) {
+    console.error(`Klaviyo event "${eventName}" error:`, err);
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.text();
@@ -48,9 +89,28 @@ export async function POST(req: Request) {
       );
     }
 
+    // ── M3.6: Order Placed ──────────────────────────────────────────────────
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       await handleSuccessfulPayment(session);
+    }
+
+    // ── M3.7: Checkout Abandoned ────────────────────────────────────────────
+    if (event.type === "checkout.session.expired") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const email =
+        session.customer_details?.email ||
+        session.customer_email ||
+        "";
+      if (email) {
+        await fireKlaviyoEvent("Checkout Abandoned", email, {
+          tier: session.metadata?.tier || "unknown",
+          product: session.metadata?.product || "",
+          amount: (session.amount_total || 0) / 100,
+          currency: session.currency || "usd",
+          session_id: session.id,
+        });
+      }
     }
 
     return NextResponse.json({ ok: true, received: true });
@@ -70,9 +130,10 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
     return;
   }
 
+  const email = session.customer_details?.email || "";
   const payload = {
     type: "order",
-    email: session.customer_details?.email || "",
+    email,
     name: session.customer_details?.name || "",
     phone: session.customer_details?.phone || "",
     address: JSON.stringify(session.collected_information?.shipping_details?.address || {}),
@@ -81,6 +142,7 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
     product: session.metadata?.product || "",
   };
 
+  // 1) Google Sheets — source of truth
   try {
     const res = await fetch(appsScriptUrl, {
       method: "POST",
@@ -90,9 +152,21 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
     if (!res.ok) {
       console.error("Apps Script returned non-OK status:", res.status, await res.text());
     } else {
-      console.log("Order logged to Google Sheets:", payload.email, payload.product, `$${payload.amount}`);
+      console.log("Order logged to Google Sheets:", email, payload.product, `$${payload.amount}`);
     }
   } catch (err) {
     console.error("Failed to POST order to Apps Script:", err);
+  }
+
+  // 2) Klaviyo — M3.6: Order Placed event (non-blocking)
+  if (email) {
+    await fireKlaviyoEvent("Order Placed", email, {
+      tier: payload.tier,
+      product: payload.product,
+      amount: payload.amount,
+      currency: session.currency || "usd",
+      name: payload.name,
+      order_id: session.id,
+    });
   }
 }
