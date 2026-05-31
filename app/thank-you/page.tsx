@@ -1,14 +1,48 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
+
+const UPSELL_MAP: Record<string, { tier: string; name: string; price: number; pitch: string }> = {
+  single:  { tier: "double",   name: "Double Mix-and-Match", price: 21, pitch: "Better value — $10.50/bottle" },
+  double:  { tier: "sixpack",  name: "6-Pack",               price: 45, pitch: "Best value — $7.50/bottle" },
+  sixpack: { tier: "single",   name: "Single Jar",           price: 13, pitch: "Gift a friend" },
+};
 
 function ThankYouContent() {
   const searchParams = useSearchParams();
   const type = searchParams.get("type") || "pickup";
   const sessionId = searchParams.get("session_id");
+  const tier = searchParams.get("tier") || "";
 
   const isOrder = type === "order" && sessionId;
+  const upsell = isOrder && tier ? UPSELL_MAP[tier] ?? null : null;
+
+  const [upsellLoading, setUpsellLoading] = useState(false);
+  const [upsellError, setUpsellError] = useState<string | null>(null);
+
+  async function handleUpsell() {
+    if (!upsell) return;
+    setUpsellLoading(true);
+    setUpsellError(null);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier: upsell.tier }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setUpsellError(data.error || "Checkout failed. Please try again.");
+      }
+    } catch {
+      setUpsellError("Something went wrong. Please try again.");
+    } finally {
+      setUpsellLoading(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-green-50 flex items-center justify-center p-4">
@@ -44,7 +78,31 @@ function ThankYouContent() {
           </div>
         )}
 
-        {/* CF-P7: UPSELL SCAFFOLD */}
+        {/* CF-P7: TIER-BASED UPSELL — shown only for completed orders */}
+        {upsell && (
+          <div className="bg-amber-50 rounded-xl p-6 mb-6 border border-amber-200 text-left">
+            <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-2">
+              Add to your order
+            </p>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-bold text-amber-900 text-lg">{upsell.name}</h2>
+              <span className="text-2xl font-bold text-amber-700">${upsell.price}</span>
+            </div>
+            <p className="text-amber-700 text-sm mb-4">{upsell.pitch}</p>
+            {upsellError && (
+              <p className="text-red-600 text-sm mb-3">{upsellError}</p>
+            )}
+            <button
+              onClick={handleUpsell}
+              disabled={upsellLoading}
+              className="w-full py-3 rounded-xl font-semibold text-white bg-amber-600 hover:bg-amber-700 transition-colors duration-200 disabled:opacity-50"
+            >
+              {upsellLoading ? "Loading..." : `Add to Order — $${upsell.price}`}
+            </button>
+          </div>
+        )}
+
+        {/* Pickup upsell scaffold (non-order flow only) */}
         {!isOrder && (
           <div className="bg-amber-50 rounded-xl p-6 mb-6 border border-amber-200">
             <h2 className="font-bold text-amber-800 mb-2">Special Offer!</h2>
@@ -58,18 +116,15 @@ function ThankYouContent() {
           </div>
         )}
 
-        {isOrder && (
+        {isOrder && sessionId && (
           <div className="bg-green-100 rounded-xl p-4 mb-6 border border-green-200">
             <p className="text-sm text-green-800">
-              Order ID: <code className="font-mono text-xs">{sessionId?.slice(-8)}</code>
+              Order ID: <code className="font-mono text-xs">{sessionId.slice(-8)}</code>
             </p>
           </div>
         )}
 
-        <a
-          href="/"
-          className="text-green-700 hover:text-green-800 underline"
-        >
+        <a href="/" className="text-green-700 hover:text-green-800 underline">
           ← Back to Shameless Brews
         </a>
       </div>

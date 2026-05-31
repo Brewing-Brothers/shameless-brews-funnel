@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${baseUrl}/thank-you?type=order&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/thank-you?type=order&session_id={CHECKOUT_SESSION_ID}&tier=${tier}`,
       cancel_url: `${baseUrl}/#order`,
       shipping_address_collection: { allowed_countries: ["US"] },
       phone_number_collection: { enabled: true },
